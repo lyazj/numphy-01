@@ -1,3 +1,5 @@
+# Homework 1 of Numerical Physics, Fall 2022
+
 To build and test this project, you need a UNIX-like system with GNU Make toolchain.
 
 To generate all executables, type:
