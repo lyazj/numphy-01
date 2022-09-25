@@ -1,0 +1,7 @@
+*
+!.gitignore
+!Makefile
+!*.h
+!*.c
+!det-plot
+!hx1-plot

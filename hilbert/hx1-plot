@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+import numpy as np
+from matplotlib import pyplot as plt
+import re
+
+outfile = 'hx1.log'
+lpat = re.compile(r'\w+')
+npat = re.compile(r'\d+')
+
+def load():
+    data = {}
+    with open(outfile) as file:
+        for line in file:
+            try:
+                expr, value = line.split('=')
+                l = lpat.match(expr)[0]
+                n = float(npat.search(expr)[0])
+                value = float(value)
+                if l in data:
+                    data[l].append([n, value])
+                else:
+                    data[l] = [[n, value]]
+            except ValueError:
+                pass
+    return {l: np.array(data[l]) for l in data}
+
+data = load()
+for l in data:
+    print(f'{l}:')
+    print(data[l])
+
+plt.title('mean squared residual error of n-degree Hilbert equation')
+plt.yscale('log')
+plt.xlabel('$n$')
+plt.ylabel('mse')
+for l in data:
+    plt.plot(data[l][:,0], data[l][:,1], '-', label=l)
+plt.legend()
+plt.savefig(__file__ + '.pdf')
+plt.show()
+
+plt.title('mean squared residual error of n-degree Hilbert equation')
+plt.yscale('log')
+plt.xlabel('$n$')
+plt.ylabel('mse')
+plt.plot(data['gem'][:13,0], data['gem'][:13,1], '--o', label='gem')
+plt.plot(data['cdm'][:13,0], data['cdm'][:13,1], '--.', label='cdm')
+plt.legend()
+plt.savefig(__file__ + '-13.pdf')
+plt.show()

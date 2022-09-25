@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+
+import re
+import numpy as np
+from matplotlib import pyplot as plt
+
+argx = re.compile(r'\d+')
+
+outfile = 'enx.out'
+
+def load_data():
+    data = {}
+    with open(outfile) as file:
+        for line in file:
+            try:
+                label, result = map(str.strip, line.split(':'))
+                expression, value = map(str.strip, result.split('='))
+                x = float(argx.search(expression)[0])
+                y = float(value.split()[0])
+                if label not in data:
+                    data[label] = [[x, y]]
+                else:
+                    data[label].append([x, y])
+            except ValueError:
+                pass
+    return {key: np.array(data[key]) for key in data}
+
+data = load_data()
+for label in data:
+    print(label, end=':\n')
+    print(data[label])
+print(end='', flush=True)
+
+plt.yscale('log')
+plt.title('computing $e^{-x}$ with three algorithms')
+plt.xlabel('argument $x$')
+plt.ylabel('result $|y|$')
+for label in data:
+    if label == 'std':
+        plt.plot(data[label][:,0], np.abs(data[label][:,1]), color='k', alpha=0.2, label=label)
+    else:
+        plt.plot(data[label][:,0], np.abs(data[label][:,1]), '*:', label=label)
+plt.legend()
+plt.savefig(__file__ + '.pdf')
+plt.show()

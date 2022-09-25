@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import numpy as np
+from matplotlib import pyplot as plt
+
+outfile = 'det.out'
+
+def load():
+    data = []
+    with open(outfile) as file:
+        for line in file:
+            data.append([float(i) for i in line.split()])
+    return np.array(data)
+
+data = load()
+print(data)
+
+plt.title('determinant of n-degree Hilbert matrix')
+plt.yscale('log')
+plt.xlabel('$n$')
+plt.ylabel('$\det H_n$')
+plt.plot(data[:,0], data[:,1], '-o')
+plt.savefig(__file__ + '.pdf')
+plt.show()

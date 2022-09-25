@@ -1,0 +1,25 @@
+# vim:filetype=make
+
+all: $(OBJ) $(BIN)
+
+run: $(RUN:%=%.run)
+
+clean:
+	$(RM) $(OBJ) $(BIN) $(OUT) $(LOG)
+
+show: $(SHOW:%=%.show)
+
+.PHONY: all run clean show
+
+%.o: %.c
+	$(CC) $(CFLAGS) $< -o $@ -c
+
+%: %.o
+	$(CC) $(filter %.o,$^) -o $@ $(LDFLAGS)
+
+%.run %.out %.log: %
+	@echo 'running: $< >$<.out 2>$<.log, log goes below...'
+	@bash -c 'set -o pipefail; PATH=:$$PATH $< 127>&1 1>$<.out 2>&127 | tee $<.log 1>&2'
+
+%.show:
+	@echo $(patsubst %.show,%,$@) = $($(patsubst %.show,%,$@))
