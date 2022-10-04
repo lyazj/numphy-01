@@ -2,3 +2,5 @@
 !.gitignore
 !Makefile
 !*.c
+!trunc-plot
+!*.remote
