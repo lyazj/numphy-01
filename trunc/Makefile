@@ -2,4 +2,7 @@
 
 include ../Makefile.conf
 
+CFLAGS += -pthread
+LDFLAGS += -pthread
+
 include ../Makefile.rule

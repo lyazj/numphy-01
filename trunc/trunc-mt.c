@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -19,12 +21,35 @@
 #define NTHREAD 64
 
 static void dS(number df[L + 1], int l, number q2);
-// static void dI(number df[L + 1], int l, number q);
-
 static void d3S(number df[L + 1], int i, int j, int k, number q2, number w);
+
+volatile int g_cont = 1;
+static void signal_handler(int signum)
+{
+  char msg[64], *p = msg;
+  int n, r;
+  g_cont = 0;
+  n = snprintf(msg, sizeof msg,
+      "terminating on signal %d...\n", signum);
+  while((r = write(STDERR_FILENO, p, n)) != n)
+  {
+    if(r < 0 && errno != EINTR)
+      break;  /* this is an error but I've no idea */
+    p += r;
+    n -= r;
+  }
+}
+static void signal_handler_init(void)
+{
+  if(signal(SIGINT, signal_handler) == SIG_ERR)
+    err(EXIT_FAILURE, "signal");
+  if(signal(SIGTERM, signal_handler) == SIG_ERR)
+    err(EXIT_FAILURE, "signal");
+}
 
 typedef struct {
   pthread_mutex_t lock;
+  int cont;
   int value;
 } l_t, *l_p;
 
@@ -49,6 +74,7 @@ static number dI_mt(int l, number q);
 static void l_init(l_p lp)
 {
   pthread_mutex_init(&lp->lock, NULL);
+  lp->cont = 1;
   lp->value = 1;
 }
 
@@ -59,7 +85,7 @@ static void *job_proc(void *argp)
   sem_t *sem = jobp->sem;
   l_p lp = jobp->lp;
   number q2 = jobp->q2;
-  int i = 1, l, r;
+  int i = 1, l, r, cont;
 
   while(i <= L)
   {
@@ -68,20 +94,27 @@ static void *job_proc(void *argp)
       errno = r;
       err(EXIT_FAILURE, "pthread_mutex_lock");
     }
-    l = lp->value++;
+    if((cont = lp->cont))
+    {
+      if((l = lp->value) <= L)
+        ++lp->value;
+    }
     if((r = pthread_mutex_unlock(&lp->lock)))
     {
       errno = r;
       err(EXIT_FAILURE, "pthread_mutex_unlock");
     }
+    if(!cont)
+      break;
     while(i < l)
+      if(sem_post(&sem[i++]))
+        err(EXIT_FAILURE, "sem_post");
+    if(i <= L)
     {
+      dS(df, i, q2);
       if(sem_post(&sem[i++]))
         err(EXIT_FAILURE, "sem_post");
     }
-    dS(df, l, q2);
-    if(sem_post(&sem[i++]))
-      err(EXIT_FAILURE, "sem_post");
   }
   return NULL;
 }
@@ -109,58 +142,86 @@ static void ctl_init(ctl_p ctlp, number q2)
   }
 }
 
-static volatile int *contp;
-static void signal_handler(int signum)
+static void ctl_fini(ctl_p ctlp)
 {
-  char msg[64], *p = msg;
-  int n, r;
-  *contp = 0;
-  n = snprintf(msg, sizeof msg,
-      "terminating on signal %d...\n", signum);
-  while((r = write(STDERR_FILENO, p, n)) != n)
-  {
-    if(r < 0 && errno != EINTR)
-      break;  /* this is an error but I've no idea */
-    p += r;
-    n -= r;
-  }
-}
-static void signal_handler_init(volatile int *cp)
-{
-  contp = cp;
-  if(signal(SIGINT, signal_handler) == SIG_ERR)
-    err(EXIT_FAILURE, "signal");
-  if(signal(SIGTERM, signal_handler) == SIG_ERR)
-    err(EXIT_FAILURE, "signal");
+  int i, r;
+
+  for(i = 0; i < NTHREAD; ++i)
+    if((r = pthread_join(ctlp->thr[i], NULL)))
+    {
+      errno = r;
+      err(EXIT_FAILURE, "pthread_join");
+    }
 }
 
 int main(void)
 {
-  int l;
-  volatile int cont = 1;
+  int l, r;
   static ctl_t ctl;
   number df;
   number f;
+  pid_t pid;
+  int wbuf;
 
+  if((pid = fork()) < 0)
+    err(EXIT_FAILURE, "fork");
+  if(pid != 0)
+    exit(EXIT_SUCCESS);
+  if((pid = fork()) < 0)
+    err(EXIT_FAILURE, "fork");
+  if(pid != 0)  /* daemon */
+  {
+    if((pid = wait(&wbuf)) < 0)
+      err(EXIT_FAILURE, "wait");
+    if(WIFEXITED(wbuf))
+    {
+      fprintf(stderr, "child %d exited with status %d\n", pid, WEXITSTATUS(wbuf));
+      exit(WEXITSTATUS(wbuf));
+    }
+    if(WIFSIGNALED(wbuf))
+    {
+      fprintf(stderr, "child %d terminated by signal %d\n", pid, WTERMSIG(wbuf));
+      exit(-1);
+    }
+    fprintf(stderr, "child %d raped with unknown error\n", pid);
+    exit(-2);
+  }
   setvbuf(stdout, NULL, _IOLBF, 0);
-  signal_handler_init(&cont);
+  signal_handler_init();
   ctl_init(&ctl, Q2);
   f = df = 1 / -Q2;
   printf("df(%d) = %g\n", 0, df);
   printf("f(%d) = %g\n", 0, f);
-  for(l = 1; cont && l <= L; ++l)
+  for(l = 1; l <= L; ++l)
   {
+    if(g_cont == 0)
+    {
+      if((r = pthread_mutex_lock(&ctl.l.lock)))
+      {
+        errno = r;
+        err(EXIT_FAILURE, "pthread_mutex_lock");
+      }
+      ctl.l.cont = 0;
+      if((r = pthread_mutex_unlock(&ctl.l.lock)))
+      {
+        errno = r;
+        err(EXIT_FAILURE, "pthread_mutex_unlock");
+      }
+      break;
+    }
     df = dS_mt(&ctl, l) + dI_mt(l, Q);
     f += df;
     printf("df(%d) = %g\n", l, df);
     printf("f(%d) = %g\n", l, f);
   }
+  ctl_fini(&ctl);
   return 0;
 }
 
 void d3S(number df[L + 1], int i, int j, int k, number q2, number w)
 {
-  number l2 = i*i + j*j + k*k;
+  number l2 = (number)i*(number)i + (number)j*(number)j
+    + (number)k*(number)k;  /* otherwise: int overflow!!! */
   int l = ceil(sqrt(l2));
 
   if(l <= L)
@@ -224,13 +285,6 @@ void dS(number df[L + 1], int l, number q2)
   // d3S_0(df, l, l, l, q2);
   d3S(df, l, l, l, q2, 8);
 }
-
-// void dI(number df[L + 1], int l, number q)
-// {
-//   df[l] -= 4 * M_PI * (1 + q / 2 * log(fabs(
-//       ((l-q) / (l+q)) * ((l+q - 1) / (l-q - 1)))
-//   ));
-// }
 
 number dI_mt(int l, number q)
 {
