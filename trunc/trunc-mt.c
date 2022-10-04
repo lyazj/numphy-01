@@ -14,11 +14,15 @@
 #define M_PI 3.14159265358979323846
 #endif  /* M_PI */
 
+#ifndef NTHREAD
+#warning "define NTHREAD to fit the local machine"
+#define NTHREAD 8
+#endif  /* NTHREAD */
+
 #define number double
 #define Q2 0.5
 #define Q (sqrt(Q2))
 #define L 1000000  /* this is OK as we have SIGINT/SIGTERM */
-#define NTHREAD 64
 
 static void dS(number df[L + 1], int l, number q2);
 static void d3S(number df[L + 1], int i, int j, int k, number q2, number w);

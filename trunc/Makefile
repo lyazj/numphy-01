@@ -2,7 +2,7 @@
 
 include ../Makefile.conf
 
-CFLAGS += -pthread
+CFLAGS += -pthread -DNTHREAD=$(shell grep processor /proc/cpuinfo | wc -l)
 LDFLAGS += -pthread
 
 include ../Makefile.rule
