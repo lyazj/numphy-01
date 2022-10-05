@@ -100,10 +100,17 @@ a = logdf_ue.a
 b = logdf_ue.b
 print(f'logd = {a} * logl + {b}, r = {logdf_ue.r}')
 logue = a * logdf[:,0] + b
+
+logl_0 = logdf[-1,0]
+logd_0 = a * logl_0 + b
+print(f'{logl_0}, {logd_0}')
+print(f'{np.exp(logl_0 * np.log(10))}, {np.exp(logd_0 * np.log(10))}')
+
 logd_0 = -4
 logl_0 = (logd_0 - b) / a
 print(f'{logl_0}, {logd_0}')
 print(f'{np.exp(logl_0 * np.log(10))}, {np.exp(logd_0 * np.log(10))}')
+
 logd_0 = -5
 logl_0 = (logd_0 - b) / a
 print(f'{logl_0}, {logd_0}')

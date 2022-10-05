@@ -10,6 +10,8 @@ To run a program named 'program-name', type:
 
     unix> make <program-name>.run
 
+NOTE: the standard output and standard error streams are redirected to \<program-name\>.out and \<program-name\>.log, respectively.
+
 To run all programs in the current directory, type:
 
     unix> make run
