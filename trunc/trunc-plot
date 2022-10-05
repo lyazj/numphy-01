@@ -72,8 +72,7 @@ class UpperEnvelope:
         self.y2sum += y * y
         self.data.append([x, y])
 
-    def purify(self, ratio=0.01):
-        n_new = int(self.n * ratio)
+    def purify(self, n_new=2):
         if n_new < 2:
             raise ValueError('too small ratio')
         while self.n > n_new:
@@ -96,11 +95,15 @@ logdf = np.log(np.abs(data['df'][10000:])) / np.log(10)
 logdf_ue = UpperEnvelope()
 for logl, logd in logdf:
     logdf_ue.addPoint(logl, logd)
-logdf_ue.purify()
+logdf_ue.purify(2)
 a = logdf_ue.a
 b = logdf_ue.b
 print(f'logd = {a} * logl + {b}, r = {logdf_ue.r}')
 logue = a * logdf[:,0] + b
+logd_0 = -4
+logl_0 = (logd_0 - b) / a
+print(f'{logl_0}, {logd_0}')
+print(f'{np.exp(logl_0 * np.log(10))}, {np.exp(logd_0 * np.log(10))}')
 logd_0 = -5
 logl_0 = (logd_0 - b) / a
 print(f'{logl_0}, {logd_0}')
@@ -112,7 +115,7 @@ plt.yscale('log')
 plt.xlabel('$l$')
 plt.ylabel('$|\Delta f_l(q^2 = 0.5)|$')
 plt.plot(data['df'][:,0], np.abs(data['df'][:,1]))
-plt.savefig(__file__ + '_raw.pdf')
+plt.savefig(__file__ + '-raw.pdf')
 plt.show()
 
 plt.title('absolute value of function progression item $\Delta f_l(q^2 = 0.5)$')
@@ -121,7 +124,7 @@ plt.ylabel('$\log_{10}|\Delta f_l(q^2 = 0.5)|$')
 plt.plot(logdf[:,0], logdf[:,1], 'lightblue', label='observed')
 plt.plot(logdf[:,0], logue, 'blue', label='upper envelope')
 plt.plot([logdf[-1,0], logl_0], [logue[-1], logd_0], '--', color='blue', label='estimated')
-plt.plot([logl_0], [logd_0], 'o', color='blue')
+plt.plot([logdf[-1,0], logl_0], [logue[-1], logd_0], 'o', color='blue')
 plt.legend()
 plt.savefig(__file__ + '.pdf')
 plt.show()
