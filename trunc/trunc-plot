@@ -109,12 +109,20 @@ logl_0 = (logd_0 - b) / a
 print(f'{logl_0}, {logd_0}')
 print(f'{np.exp(logl_0 * np.log(10))}, {np.exp(logd_0 * np.log(10))}')
 
+plt.title('value of function progression $f_l(q^2 = 0.5)$')
+plt.xscale('log')
+plt.xlabel('$l$')
+plt.ylabel('$f_l(q^2 = 0.5)$')
+plt.plot(data['f'][1:,0], np.abs(data['f'][1:,1]))
+plt.savefig(__file__ + '-func.pdf')
+plt.show()
+
 plt.title('absolute value of function progression item $\Delta f_l(q^2 = 0.5)$')
 plt.xscale('log')
 plt.yscale('log')
 plt.xlabel('$l$')
 plt.ylabel('$|\Delta f_l(q^2 = 0.5)|$')
-plt.plot(data['df'][:,0], np.abs(data['df'][:,1]))
+plt.plot(data['df'][1:,0], np.abs(data['df'][1:,1]))
 plt.savefig(__file__ + '-raw.pdf')
 plt.show()
 
