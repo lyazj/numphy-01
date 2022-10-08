@@ -1,5 +1,7 @@
 # Homework 1 of Numerical Physics, Fall 2022, PKU
 
+Above all, [here](solution.pdf) comes the solution.
+
 To build and test this project, you need a UNIX-like system with GNU Make toolchain.
 
 To generate all executables, type:
